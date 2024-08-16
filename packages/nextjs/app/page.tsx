@@ -1,16 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import { useEffect, useState } from "react";
+// import Link from "next/link";
 import { useDynamicContext } from "@dynamic-labs/sdk-react-core";
 import type { NextPage } from "next";
-import { BugAntIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
+// import { BugAntIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { Address } from "~~/components/scaffold-eth";
 
 // import { sendTransaction, signMessage } from "~~/lib/dynamic";
 
 const Home: NextPage = () => {
   const { primaryWallet /** , networkConfigurations */ } = useDynamicContext();
+  const [recommendations, setRecommendations] = useState<any[]>([]);
   const [messageSignature /** , setMessageSignature */] = useState<string>("");
   const [transactionSignature /** , setTransactionSignature */] = useState<string>("");
   const connectedAddress = primaryWallet?.address;
@@ -44,6 +45,36 @@ const Home: NextPage = () => {
   //     console.error(e);
   //   }
   // };
+
+  useEffect(() => {
+    const fetchRecommendations = async () => {
+      if (connectedAddress) {
+        try {
+          const response = await fetch(
+            `https://www.targetonchain.xyz/api/frame/20/recommendation?address=${connectedAddress}`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ address: connectedAddress }),
+            },
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            setRecommendations(data.recommendations);
+          } else {
+            console.error("Failed to fetch recommendations");
+          }
+        } catch (error) {
+          console.error("Error fetching recommendations:", error);
+        }
+      }
+    };
+
+    fetchRecommendations();
+  }, [connectedAddress]);
 
   return (
     <>
@@ -92,10 +123,22 @@ const Home: NextPage = () => {
           </p>
         </div>
 
-        {primaryWallet && !transactionSignature && (
+        {primaryWallet && (
           <div className="flex-grow bg-base-300 w-full mt-16 px-8 py-12">
             <div className="flex justify-center items-center gap-12 flex-col sm:flex-row">
-              <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-xs rounded-3xl">
+              {recommendations.length > 0 && (
+                <div className="flex-grow bg-base-300 w-full mt-16 px-8 py-12">
+                  <div className="flex flex-col gap-4">
+                    {recommendations.map((rec, index) => (
+                      <div key={index} className="bg-base-100 px-10 py-6 rounded-3xl">
+                        <h3 className="text-xl font-bold">{rec.collectionName}</h3>
+                        <p>{rec.message}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-xs rounded-3xl">
                 <BugAntIcon className="h-8 w-8 fill-secondary" />
                 <p>
                   Tinker with your smart contract using the{" "}
@@ -114,7 +157,7 @@ const Home: NextPage = () => {
                   </Link>{" "}
                   tab.
                 </p>
-              </div>
+              </div> */}
             </div>
           </div>
         )}
